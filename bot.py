@@ -1,7 +1,6 @@
 import os
 import telebot
 import yt_dlp
-from telebot import types
 from flask import Flask
 from threading import Thread
 
@@ -17,7 +16,7 @@ def run_web():
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
 def download_send(chat_id, url):
-    # YouTube blokirovkasidan qochish uchun sozlamalar
+    # Eng yangi blokirovkalarni aylanib o'tish sozlamalari
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': 'song.%(ext)s',
@@ -27,19 +26,21 @@ def download_send(chat_id, url):
             'preferredquality': '192',
         }],
         'quiet': True,
-        'no_check_certificate': True,
-        'noproxy': True,
-        'add_header': [
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-        ],
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}} # Mana shu qatorni qo'shdik
+        # YouTube blokirovkasidan qochish uchun 'cookies' ishlatish kerak, 
+        # lekin renderda bu qiyin, shuning uchun 'ios' clientidan foydalanamiz
+        'extractor_args': {'youtube': {'player_client': ['ios']}}, 
+        'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
     }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
     
-    with open('song.mp3', 'rb') as f:
-        bot.send_audio(chat_id, f, caption="Tayyor! ✅")
-    os.remove('song.mp3')
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        
+        with open('song.mp3', 'rb') as f:
+            bot.send_audio(chat_id, f, caption="Tayyor! ✅ @avagadro30_bot")
+        os.remove('song.mp3')
+    except Exception as e:
+        raise e
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -49,16 +50,17 @@ def start(message):
 def handle_message(message):
     url = message.text
     if "youtube.com" in url or "youtu.be" in url:
-        bot.send_message(message.chat.id, "Yuklashni boshladim... ⏳")
+        msg = bot.send_message(message.chat.id, "Yuklashni boshladim... (Bu 1 daqiqagacha vaqt olishi mumkin) ⏳")
         try:
             download_send(message.chat.id, url)
+            bot.delete_message(message.chat.id, msg.message_id)
         except Exception as e:
-            bot.send_message(message.chat.id, f"Xatolik yuz berdi: {str(e)[:50]}... ❌")
+            bot.send_message(message.chat.id, f"Xatolik: YouTube bu videoni blokladi. Boshqa link yuboring. ❌")
+            print(f"Error: {e}")
     else:
         bot.send_message(message.chat.id, "Iltimos, faqat YouTube linkini yuboring! 📎")
 
 if __name__ == "__main__":
     t = Thread(target=run_web)
     t.start()
-    print("Bot ishga tushdi...")
     bot.polling(none_stop=True)
