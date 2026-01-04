@@ -28,12 +28,12 @@ def download_send(chat_id, url):
         }],
         'quiet': True,
         'no_check_certificate': True,
-        'noproxy': True,  # Proxy muammosini hal qilish uchun
+        'noproxy': True,
         'add_header': [
-            'User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        ]
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+        ],
+        'extractor_args': {'youtube': {'player_client': ['android', 'web']}} # Mana shu qatorni qo'shdik
     }
-    
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
     
